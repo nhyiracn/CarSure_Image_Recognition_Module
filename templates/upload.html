@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f0f2ff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .form-group {
+            margin: 1rem 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .results {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .results.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .results.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .detection-details {
+            margin-top: 1rem;
+        }
+
+        .detection-item {
+            background: #f8f9fa;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Vehicle Detection System</h1>
+            <p>Upload a vehicle image for verification and analysis</p>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">
+                    <p>Drag and drop your vehicle image here</p>
+                    <p>or</p>
+                    <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                </div>
+                <input type="file" id="fileInput" name="image" class="file-input" accept="image/*" required>
+            </div>
+
+            <div class="form-group">
+                <label for="vinNumber">VIN Number (Optional):</label>
+                <input type="text" id="vinNumber" name="vin" placeholder="Enter VIN number">
+            </div>
+
+            <div class="form-group">
+                <label for="stakeholderId">Stakeholder ID:</label>
+                <input type="text" id="stakeholderId" name="stakeholder_id" placeholder="Enter stakeholder ID" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confidence">Confidence Threshold:</label>
+                <input type="range" id="confidence" name="confidence" min="0.1" max="0.9" step="0.1" value="0.3">
+                <span id="confidenceValue">0.3</span>
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">
+                Detect Vehicle
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing image...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const confidenceSlider = document.getElementById('confidence');
+        const confidenceValue = document.getElementById('confidenceValue');
+
+        // Update confidence value display
+        confidenceSlider.addEventListener('input', function() {
+            confidenceValue.textContent = this.value;
+        });
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('dragover'), false);
+        });
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            handleFiles(files);
+        }
+
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                displayPreview(file);
+            }
+        }
+
+        function displayPreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.createElement('img');
+                preview.src = e.target.result;
+                preview.className = 'preview-image';
+                
+                // Remove existing preview
+                const existingPreview = uploadArea.querySelector('.preview-image');
+                if (existingPreview) {
+                    existingPreview.remove();
+                }
+                
+                uploadArea.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            // Show loading
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/detect-vehicle', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                loading.style.display = 'none';
+                
+                // Show results
+                displayResults(data, response.ok);
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                displayResults({error: 'Network error occurred'}, false);
+            }
+        });
+
+        function displayResults(data, success) {
+            const resultContent = document.getElementById('resultContent');
+            results.className = 'results ' + (success ? 'success' : 'error');
+            
+            if (success && data.is_vehicle) {
+                resultContent.innerHTML = `
+                    <h3>✅ Vehicle Detected!</h3>
+                    <div class="detection-details">
+                        <p><strong>Detected Types:</strong> ${data.detected_classes.join(', ')}</p>
+                        <p><strong>Confidence Scores:</strong> ${data.confidence_scores.map(c => (c * 100).toFixed(1) + '%').join(', ')}</p>
+                        <p><strong>Number of Vehicles:</strong> ${data.detected_classes.length}</p>
+                        ${data.vin_number ? `<p><strong>VIN:</strong> ${data.vin_number}</p>` : ''}
+                        <p><strong>Stakeholder:</strong> ${data.stakeholder_id}</p>
+                        <p><strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                    </div>
+                    ${data.annotated_image_url ? `<img src="${data.annotated_image_url}" class="preview-image" alt="Annotated result">` : ''}
+                `;
+            } else if (success && !data.is_vehicle) {
+                results.className = 'results error';
+                resultContent.innerHTML = `
+                    <h3>❌ No Vehicle Detected</h3>
+                    <p>The uploaded image does not contain any detectable vehicles.</p>
+                    <p>Please upload a clear image of a car, motorcycle, bus, or truck.</p>
+                `;
+            } else {
+                resultContent.innerHTML = `
+                    <h3>❌ Error</h3>
+                    <p>${data.error || 'An error occurred during processing'}</p>
+                `;
+            }
+            
+            results.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
